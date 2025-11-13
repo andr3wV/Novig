@@ -2,10 +2,10 @@ import type { WeatherDay } from "./types"
 
 interface DayMetrics {
   avgFeels: number
-  maxPrecipProb: number
-  totalPrecip: number
+  avgPrecipProb: number
+  avgPrecip: number
   avgWind: number
-  maxGust: number
+  avgGust: number
   hasThunderstorm: boolean
   hasSnowIce: boolean
   extremeTemp: boolean
@@ -16,10 +16,10 @@ function analyzeDayWindow(day: WeatherDay): DayMetrics {
   const count = Math.max(1, hours.length)
 
   const avgFeels = hours.reduce((sum, h) => sum + h.feelsLike, 0) / count
-  const maxPrecipProb = Math.max(...hours.map((h) => h.precipProb))
-  const totalPrecip = hours.reduce((sum, h) => sum + (h.precip || 0), 0)
+  const avgPrecipProb = hours.reduce((sum, h) => sum + h.precipProb, 0) / count
+  const avgPrecip = hours.reduce((sum, h) => sum + (h.precip || 0), 0) / count
   const avgWind = hours.reduce((sum, h) => sum + h.wind, 0) / count
-  const maxGust = Math.max(...hours.map((h) => h.windGust || 0))
+  const avgGust = hours.reduce((sum, h) => sum + (h.windGust || 0), 0) / count
 
   const hasThunderstorm = /thunder|t[-\s]?storm/i.test(day.condition || "")
   const hasSnowIce = /snow|ice|sleet|freez/i.test(day.condition || "")
@@ -27,10 +27,10 @@ function analyzeDayWindow(day: WeatherDay): DayMetrics {
 
   return {
     avgFeels,
-    maxPrecipProb,
-    totalPrecip,
+    avgPrecipProb,
+    avgPrecip,
     avgWind,
-    maxGust,
+    avgGust,
     hasThunderstorm,
     hasSnowIce,
     extremeTemp,
@@ -63,16 +63,16 @@ export function getRecommendation(
   if (nextM.extremeTemp && !thisM.extremeTemp) {
     return { recommendedIndex: 0, reason: "Avoid extreme temperatures next Friday" }
   }
-  if (thisM.maxGust >= 35 && nextM.maxGust < 35) {
+  if (thisM.avgGust >= 35 && nextM.avgGust < 35) {
     return { recommendedIndex: 1, reason: "Avoid dangerous wind gusts this Friday" }
   }
-  if (nextM.maxGust >= 35 && thisM.maxGust < 35) {
+  if (nextM.avgGust >= 35 && thisM.avgGust < 35) {
     return { recommendedIndex: 0, reason: "Avoid dangerous wind gusts next Friday" }
   }
 
-  // 2. Rain risk (max precip probability)
-  const rainThis = Math.round(thisM.maxPrecipProb)
-  const rainNext = Math.round(nextM.maxPrecipProb)
+  // 2. Rain risk (average precip probability)
+  const rainThis = Math.round(thisM.avgPrecipProb)
+  const rainNext = Math.round(nextM.avgPrecipProb)
   const rainDiff = Math.abs(rainThis - rainNext)
   if (rainDiff >= 15) {
     if (rainThis < rainNext) {

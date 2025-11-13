@@ -26,9 +26,9 @@ interface ControllerBarProps {
 const WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 const TIME_RANGES = [
-  { label: "Morning", value: "morning (8-12)", hours: "8–12" },
-  { label: "Afternoon", value: "afternoon (12-5)", hours: "12–5" },
-  { label: "Evening", value: "evening (5-9)", hours: "5–9" },
+  { label: "Morning", value: "morning", hours: "8–12" },
+  { label: "Afternoon", value: "afternoon", hours: "12–5" },
+  { label: "Evening", value: "evening", hours: "5–9" },
 ]
 
 export function ControllerBar({
@@ -54,7 +54,7 @@ export function ControllerBar({
     if (timeRange.startsWith("custom")) {
       return `${formatTime12Hour(customTimeRange[0])} - ${formatTime12Hour(customTimeRange[1])}`
     }
-    return `${currentTimeRange.label} (${currentTimeRange.hours})`
+    return `${currentTimeRange.label}`
   }
 
   return (
@@ -100,7 +100,7 @@ export function ControllerBar({
                     key={range.value} 
                     onClick={() => onTimeRangeChange(range.value)}
                   >
-                    {range.label} ({range.hours})
+                    {range.label}
                   </DropdownMenuItem>
                 ))}
                 <DropdownMenuSeparator />

@@ -6,6 +6,8 @@ import { getWeatherData } from "@/actions/weather"
 import { getRecommendation } from "@/lib/decision"
 import type { WeatherDay } from "@/lib/types"
 import { LoadingSkeleton } from "./loading"
+import { RightAccordion } from "./right-accordion"
+import { weatherCache } from "@/lib/weather-cache"
 
 interface WeatherComparisonProps {
   location: string
@@ -26,7 +28,20 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
       try {
         setLoading(true)
         setError(null)
-        const data = await getWeatherData(coordinates.lat, coordinates.lon, dayOfWeek, eventTime)
+        
+        // Check cache first
+        const cachedData = weatherCache.get(coordinates.lat, coordinates.lon, dayOfWeek, eventTime)
+        
+        let data: WeatherDay[]
+        if (cachedData) {
+          // Use cached data
+          data = cachedData
+        } else {
+          // Fetch from API and cache the result
+          data = await getWeatherData(coordinates.lat, coordinates.lon, dayOfWeek, eventTime)
+          weatherCache.set(coordinates.lat, coordinates.lon, dayOfWeek, eventTime, data)
+        }
+        
         setWeatherData(data)
         
         // Generate recommendation if we have 2 days
@@ -73,8 +88,9 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
     <div className="space-y-6">
       {/* Weather Cards with Inline Charts - Mobile Vertical Stack, Desktop Side-by-Side */}
       <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {weatherData.slice(0, 2).map((day, idx) => (
+        {/* Mobile vertical stack - show all days */}
+        <div className="grid grid-cols-1 gap-6 md:hidden">
+          {weatherData.map((day, idx) => (
             <WeatherCard
               key={idx}
               day={day}
@@ -84,6 +100,29 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
               recommendationReason={recommendedIndex === idx ? recommendationReason ?? undefined : undefined}
             />
           ))}
+        </div>
+
+        {/* Desktop: left fixed card + right accordion carousel */}
+        <div className="hidden md:grid md:grid-cols-2 gap-6 items-stretch">
+          <div className="h-full">
+            <WeatherCard
+              day={weatherData[0]}
+              location={location}
+              isPrimary
+              isRecommended={recommendedIndex === 0}
+              recommendationReason={recommendedIndex === 0 ? recommendationReason ?? undefined : undefined}
+            />
+          </div>
+          {weatherData.length > 1 ? (
+            <RightAccordion
+              days={weatherData.slice(1)}
+              location={location}
+              initialRightRecommended={recommendedIndex === 1}
+              recommendationReason={recommendedIndex === 1 ? recommendationReason ?? undefined : undefined}
+            />
+          ) : (
+            <div className="h-full" />
+          )}
         </div>
       </div>
     </div>

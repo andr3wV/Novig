@@ -6,7 +6,7 @@ import { WeatherComparison } from "@/components/comparison"
 
 export default function Home() {
   const [location, setLocation] = useState("Dolores Park, SF")
-  const [eventTime, setEventTime] = useState("afternoon (12-5)")
+  const [eventTime, setEventTime] = useState("afternoon")
   const [dayOfWeek, setDayOfWeek] = useState("Friday")
   const [coordinates, setCoordinates] = useState({ lat: 37.7694, lon: -122.4862 })
 

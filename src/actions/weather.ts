@@ -1,7 +1,6 @@
 "use server"
 
 import type { HourlyWeatherData, WeatherDay, VisualCrossingDay } from "../lib/types"
-import { formatTime12Hour } from "../lib/utils"
 
 // Map icon names to icons
 function mapIcon(icon: string): string {
@@ -18,6 +17,14 @@ function mapIcon(icon: string): string {
     fog: "cloud-fog",
   }
   return iconMap[icon] || "cloud"
+}
+
+// Local helper for server usage
+function to12Hour(hour: number): string {
+  const normalized = Math.max(0, Math.min(23, Math.floor(hour)))
+  const h12 = ((normalized + 11) % 12) + 1
+  const suffix = normalized >= 12 ? "pm" : "am"
+  return `${h12}${suffix}`
 }
 
 // Extract time window data from hourly data
@@ -47,13 +54,27 @@ function extractTimeWindowData(hours: any[], timeOfDay: string): HourlyWeatherDa
 
   for (let i = 0; i <= duration; i++) {
     const hour = hours.find((h) => {
-      const hourNum = Number.parseInt(h.datetime.split(":")[0])
+      // Robustly parse hour from various possible formats
+      // Examples: "13:00:00" or "2025-11-18T13:00:00-08:00"
+      let hourStr = ""
+      if (typeof h.datetime === "string") {
+        if (h.datetime.includes("T")) {
+          const afterT = h.datetime.split("T")[1] || ""
+          hourStr = afterT.split(":")[0] || ""
+        } else {
+          hourStr = h.datetime.split(":")[0] || ""
+        }
+      } else if (typeof h.datetimeEpoch === "number") {
+        const d = new Date(h.datetimeEpoch * 1000)
+        return d.getHours() === startHour + i
+      }
+      const hourNum = Number.parseInt(hourStr)
       return hourNum === startHour + i
     })
 
     if (hour) {
       result.push({
-        time: formatTime12Hour(startHour + i),
+        time: to12Hour(startHour + i),
         temp: Math.round(hour.temp),
         feelsLike: Math.round(hour.feelslike || hour.temp),
         wind: Math.round(hour.windspeed),
@@ -82,12 +103,21 @@ export async function getWeatherData(
 
   try {
     const response = await fetch(
-      `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${latitude},${longitude}/next14days?unitGroup=us&include=days,hours&key=${apiKey}`,
-      { cache: "no-store" }, // Not caching to avoid stale data
+      `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${latitude},${longitude}/next60days?unitGroup=us&include=days,hours&key=${apiKey}`,
+      {
+        // Cache for 1 hour - weather doesn't change that frequently
+        next: { revalidate: 3600 }
+      }
     )
 
     if (!response.ok) {
-      throw new Error(`Weather API error: ${response.statusText}`)
+      let details = ""
+      try {
+        details = await response.text()
+      } catch (_) {
+        // ignore
+      }
+      throw new Error(`Weather API error: ${response.status} ${response.statusText} ${details}`.trim())
     }
 
     const data = await response.json()
@@ -123,26 +153,32 @@ export async function getWeatherData(
           day: "numeric",
         })
 
-        // Create labels: "This Friday, Nov 10" or "Next Friday, Nov 17"
         const isFirst = results.length === 0
-        const prefix = isFirst ? "This" : "Next"
-        const dateLabel = `${prefix} ${dayName}, ${monthDay}`
+        const isSecond = results.length === 1
+        let dateLabel: string
+        if (isFirst) {
+          dateLabel = `This ${dayName}, ${monthDay}`
+        } else if (isSecond) {
+          dateLabel = `Next ${dayName}, ${monthDay}`
+        } else {
+          dateLabel = `${dayName}, ${monthDay}`
+        }
 
         const daysUntil = Math.round((dayDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
-        let timeOfDayLabel = "Afternoon (12pm-5pm)"
+        let timeOfDayLabel = "Afternoon"
         if (timeOfDay.includes("custom")) {
           // Parse custom range: "custom (8-17)"
           const match = timeOfDay.match(/\((\d+)-(\d+)\)/)
           if (match) {
             const start = Number.parseInt(match[1])
             const end = Number.parseInt(match[2])
-            timeOfDayLabel = `${formatTime12Hour(start)}-${formatTime12Hour(end)}`
+            timeOfDayLabel = `${to12Hour(start)}-${to12Hour(end)}`
           }
         } else if (timeOfDay.includes("morning")) {
-          timeOfDayLabel = "Morning (8am-12pm)"
+          timeOfDayLabel = "Morning"
         } else if (timeOfDay.includes("evening")) {
-          timeOfDayLabel = "Evening (5pm-9pm)"
+          timeOfDayLabel = "Evening"
         }
 
         const avgTemp = day.temp || Math.round((day.tempmax! + day.tempmin!) / 2)
@@ -166,8 +202,6 @@ export async function getWeatherData(
           hourlyData,
           daysUntil,
         })
-
-        if (results.length === 2) break
       }
     }
 

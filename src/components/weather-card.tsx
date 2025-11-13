@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Cloud, CloudRain, Sun, ChevronDown, ChevronUp, Star } from "lucide-react"
+import { Cloud, CloudRain, Sun, ChevronDown, ChevronUp, Star, Droplet, Wind } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { WeatherChart } from "./chart"
@@ -74,6 +74,18 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
           <div className="shrink-0">{getWeatherIcon(day.condition)}</div>
         </div>
 
+        {/* Compact metrics: wind and precip */}
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Wind className="w-4 h-4" />
+            {Math.round(day.windSpeed)} mph
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <Droplet className="w-4 h-4" />
+            {Math.round(day.precipProb)}%
+          </span>
+        </div>
+
         {/* Chart Toggle Button (Mobile) */}
         <div className="md:hidden">
           <button
@@ -82,11 +94,11 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
           >
             {isChartExpanded ? (
               <>
-                Hide Chart <ChevronUp className="w-4 h-4" />
+                <ChevronUp className="w-4 h-4" />
               </>
             ) : (
               <>
-                Show Chart <ChevronDown className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4" />
               </>
             )}
           </button>
@@ -98,7 +110,7 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
             <WeatherChart day={day} />
           ) : (
             <div className="h-64 flex items-center justify-center text-muted-foreground">
-              No hourly data available
+              Hourly data not available beyond 15 days
             </div>
           )}
         </div>

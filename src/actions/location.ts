@@ -14,7 +14,7 @@ export async function searchLocations(query: string): Promise<LocationSuggestion
   try {
     const response = await fetch(
       `https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/${encodeURIComponent(query)}?key=${apiKey}&include=current`,
-      { cache: "no-store" }, // Not caching to avoid stale data
+      // { cache: "no-store" }, // Normally would do this to avoid stale data, but I keep getting rate limit exceeded errors so enable caching for now
     )
 
     if (!response.ok) {
