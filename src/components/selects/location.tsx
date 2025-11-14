@@ -69,9 +69,9 @@ export function LocationSelector({ value, onChange }: LocationSelectorProps) {
           onChange={(e) => handleSearch(e.target.value)}
           onFocus={() => suggestions.length > 0 && setIsOpen(true)}
           placeholder="Search for a location..."
-          className="pl-9 pr-9 font-extrabold"
+          className="pl-9 pr-9 font-bold"
         />
-        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none text-black" />
         {input && (
           <button
             onClick={handleClear}
