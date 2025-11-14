@@ -246,3 +246,43 @@ export function processDayData(
   }
 }
 
+/**
+ * Calculate time-window averages from hourly data, falling back to day values if no hourly data
+ */
+export function calculateTimeWindowAverages(day: WeatherDay) {
+  const hours = day.hourlyData || []
+  const count = Math.max(1, hours.length)
+  
+  const avgTemperature = hours.length > 0
+    ? Math.round(hours.reduce((sum, h) => sum + h.temp, 0) / count)
+    : Math.round(day.temperature)
+  
+  const avgFeelsLike = hours.length > 0
+    ? Math.round(hours.reduce((sum, h) => sum + h.feelsLike, 0) / count)
+    : Math.round(day.feelsLike)
+  
+  const avgWindSpeed = hours.length > 0
+    ? Math.round(hours.reduce((sum, h) => sum + h.wind, 0) / count)
+    : Math.round(day.windSpeed)
+  
+  const avgWindGust = hours.length > 0
+    ? Math.round(hours.reduce((sum, h) => sum + (h.windGust || 0), 0) / count)
+    : Math.round(day.windGust)
+  
+  const avgPrecipProb = hours.length > 0
+    ? Math.round(hours.reduce((sum, h) => sum + h.precipProb, 0) / count)
+    : Math.round(day.precipProb)
+  
+  const avgPrecip = hours.length > 0
+    ? hours.reduce((sum, h) => sum + (h.precip || 0), 0) / count
+    : day.precipitation
+  
+  return {
+    avgTemperature,
+    avgFeelsLike,
+    avgWindSpeed,
+    avgWindGust,
+    avgPrecipProb,
+    avgPrecip,
+  }
+}

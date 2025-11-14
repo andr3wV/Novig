@@ -12,6 +12,7 @@ import {
   type CarouselApi,
 } from "@/components/ui/carousel"
 import { WeatherCard } from "@/components/weather-card"
+import { calculateTimeWindowAverages } from "@/lib/weather-processing"
 
 interface RightAccordionProps {
   days: WeatherDay[]
@@ -77,6 +78,7 @@ export function RightAccordion({ days, location, initialRightRecommended, recomm
         {Array.from({ length: visibleStack }).map((_, i) => {
           const day = days[startIndex + i]
           const dateShort = day.dateLabel.includes(", ") ? day.dateLabel.split(", ")[1] : day.dateLabel
+          const { avgTemperature, avgWindSpeed, avgPrecipProb } = calculateTimeWindowAverages(day)
           return (
             <div
               key={startIndex + i}
@@ -93,15 +95,15 @@ export function RightAccordion({ days, location, initialRightRecommended, recomm
                   {dateShort}
                 </span>
                 <span className="text-xs font-semibold">
-                  {Math.round(day.temperature)}°
+                  {avgTemperature}°
                 </span>
                 <span className="inline-flex items-center gap-0.5 text-[10px] text-muted-foreground">
                   <Wind className="w-3 h-3" />
-                  {Math.round(day.windSpeed)}
+                  {avgWindSpeed}
                 </span>
                 <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                   <Droplet className="w-3 h-3" />
-                  {Math.round(day.precipProb)}%
+                  {avgPrecipProb}%
                 </span>
               </div>
             </div>

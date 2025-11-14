@@ -54,7 +54,7 @@ export function WeatherChart({ day }: WeatherChartProps) {
             strokeWidth={2}
           />
           <Line
-            yAxisId="right"
+            yAxisId="left"
             type="monotone"
             dataKey="precipProb"
             stroke="hsl(120, 60%, 40%)"

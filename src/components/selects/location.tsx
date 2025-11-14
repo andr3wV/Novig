@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { MapPin, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { searchLocations } from "@/actions/location"
@@ -17,6 +17,11 @@ export function LocationSelector({ value, onChange }: LocationSelectorProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string>("")
+
+  // Sync local input state with parent value prop
+  useEffect(() => {
+    setInput(value)
+  }, [value])
 
   const handleSearch = useCallback(async (query: string) => {
     setInput(query)
@@ -90,7 +95,7 @@ export function LocationSelector({ value, onChange }: LocationSelectorProps) {
       )}
 
       {error && (
-        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-destructive/10 border border-destructive/30 rounded-none text-sm text-destructive">
+        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-red-100 rounded-none text-sm text-red-800">
           {error}
         </div>
       )}

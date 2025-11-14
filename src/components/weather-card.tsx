@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
 import { Badge } from "@/components/ui/badge"
 import { WeatherChart } from "./chart"
+import { calculateTimeWindowAverages } from "@/lib/weather-processing"
 import type { WeatherDay } from "@/lib/types"
 
 
@@ -17,8 +18,11 @@ interface WeatherCardProps {
   recommendationReason?: string
 }
 
-export function WeatherCard({ day, location, isPrimary, isRecommended, recommendationReason }: WeatherCardProps) {
+export function WeatherCard({ day, isPrimary, isRecommended, recommendationReason }: WeatherCardProps) {
   const [isChartExpanded, setIsChartExpanded] = useState(false)
+
+  // Calculate time-window averages from hourly data
+  const { avgTemperature, avgWindSpeed, avgPrecipProb } = calculateTimeWindowAverages(day)
   
   const getWeatherIcon = (condition: string) => {
     const lowerCondition = condition.toLowerCase()
@@ -52,12 +56,12 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
             <HoverCard>
               <HoverCardTrigger asChild>
                 <button className="shrink-0 mt-1 mr-2">
-                  <Star className="w-6 h-6 fill-blue-600 text-blue-600" />
+                  <Star className="w-6 h-6 fill-primary " />
                 </button>
               </HoverCardTrigger>
-              <HoverCardContent className="w-80">
+              <HoverCardContent>
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-blue-700">Recommended Day</h4>
+                  <h4 className="text-sm font-semibold">Recommended Day</h4>
                   <p className="text-sm text-muted-foreground">{recommendationReason}</p>
                 </div>
               </HoverCardContent>
@@ -69,7 +73,7 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
         {/* Main Weather Display */}
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-5xl font-bold">{Math.round(day.temperature)}°F</p>
+            <p className="text-5xl font-bold">{avgTemperature}°F</p>
             <p className="text-sm text-muted-foreground capitalize mt-1">{day.condition}</p>
           </div>
           <div className="shrink-0">{getWeatherIcon(day.condition)}</div>
@@ -79,11 +83,11 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <Wind className="w-4 h-4" />
-            {Math.round(day.windSpeed)} mph
+            {avgWindSpeed} mph
           </span>
           <span className="inline-flex items-center gap-1">
             <Droplet className="w-4 h-4" />
-            {Math.round(day.precipProb)}%
+            {avgPrecipProb}%
           </span>
         </div>
 

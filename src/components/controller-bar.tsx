@@ -94,7 +94,7 @@ export function ControllerBar({
                   </span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-80">
+              <DropdownMenuContent align="start" className="w-80 mr-4">
                 {TIME_RANGES.map((range) => (
                   <DropdownMenuItem 
                     key={range.value} 
