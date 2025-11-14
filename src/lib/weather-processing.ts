@@ -1,4 +1,4 @@
-import type { HourlyWeatherData, WeatherDay, VisualCrossingDay } from "./types"
+import type { HourlyWeatherData, WeatherDay, VisualCrossingDay, WeatherMessage } from "./types"
 import { formatTime12Hour } from "./utils"
 
 const iconMap: Record<string, string> = {
@@ -71,6 +71,119 @@ function extractTimeWindowData(hours: any[], timeOfDay: string): HourlyWeatherDa
   return result
 }
 
+/**
+ * Generates weather message badges based on weather conditions
+ */
+export function generateWeatherMessages(day: VisualCrossingDay): WeatherMessage[] {
+  const messages: WeatherMessage[] = []
+  const temp = day.temp || (day.tempmax && day.tempmin ? (day.tempmax + day.tempmin) / 2 : undefined)
+  const humidity = day.humidity
+  const precipProb = day.precipprob
+  const windSpeed = day.windspeed
+  const cloudCover = day.cloudcover
+  const uvIndex = day.uvindex
+
+  // Temperature-based messages
+  if (temp !== undefined) {
+    if (temp >= 60 && temp <= 75) {
+      messages.push({
+        text: "Nice day",
+        variant: "default"
+      })
+    } else if (temp > 75 && temp <= 85) {
+      messages.push({
+        text: "Warm",
+        variant: "secondary"
+      })
+    } else if (temp > 85) {
+      messages.push({
+        text: "Hot weather",
+        variant: "destructive"
+      })
+    } else if (temp < 60 && temp >= 45) {
+      messages.push({
+        text: "Cool",
+        variant: "secondary"
+      })
+    } else if (temp < 45) {
+      messages.push({
+        text: "Cold",
+        variant: "outline"
+      })
+    }
+  }
+
+  // Precipitation probability
+  if (precipProb !== undefined) {
+    if (precipProb >= 70) {
+      messages.push({
+        text: "Likely rain",
+        variant: "destructive"
+      })
+    } else if (precipProb >= 40 && precipProb < 70) {
+      messages.push({
+        text: "Chance of rain",
+        variant: "secondary"
+      })
+    }
+  }
+
+  // Humidity-based messages
+  if (humidity !== undefined) {
+    if (humidity >= 70) {
+      messages.push({
+        text: "Humid",
+        variant: "secondary"
+      })
+    } else if (humidity <= 30) {
+      messages.push({
+        text: "Dry air",
+        variant: "outline"
+      })
+    }
+  }
+
+  // Wind-based messages
+  if (windSpeed !== undefined) {
+    if (windSpeed >= 25) {
+      messages.push({
+        text: "Very windy",
+        variant: "destructive"
+      })
+    } else if (windSpeed >= 15 && windSpeed < 25) {
+      messages.push({
+        text: "Windy",
+        variant: "secondary"
+      })
+    }
+  }
+
+  // Cloud cover messages
+  if (cloudCover !== undefined) {
+    if (cloudCover >= 80) {
+      messages.push({
+        text: "Overcast",
+        variant: "outline"
+      })
+    } else if (cloudCover <= 20) {
+      messages.push({
+        text: "Clear skies",
+        variant: "default"
+      })
+    }
+  }
+
+  // UV index warnings
+  if (uvIndex !== undefined && uvIndex >= 8) {
+    messages.push({
+      text: "High UV",
+      variant: "destructive"
+    })
+  }
+
+  return messages
+}
+
 export function processDayData(
   day: VisualCrossingDay,
   targetDate: string,
@@ -112,6 +225,9 @@ export function processDayData(
     ? Math.round(hourlyData.reduce((sum, h) => sum + h.feelsLike, 0) / hourlyData.length)
     : avgTemp
 
+  // Generate weather messages
+  const messages = generateWeatherMessages(day)
+
   return {
     dateLabel,
     dayOfWeek: dayDate.toLocaleDateString("en-US", { weekday: "long" }),
@@ -126,6 +242,7 @@ export function processDayData(
     precipProb: Math.round(day.precipprob || 0),
     hourlyData,
     daysUntil,
+    messages,
   }
 }
 

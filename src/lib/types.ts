@@ -15,6 +15,11 @@ export interface HourlyWeatherData {
   precipProb: number
 }
 
+export interface WeatherMessage {
+  text: string
+  variant: "default" | "secondary" | "destructive" | "outline"
+}
+
 export interface WeatherDay {
   dateLabel: string
   dayOfWeek: string
@@ -29,6 +34,7 @@ export interface WeatherDay {
   precipProb: number
   hourlyData: HourlyWeatherData[]
   daysUntil?: number
+  messages?: WeatherMessage[]
 }
 
 export interface VisualCrossingDay {
@@ -43,6 +49,9 @@ export interface VisualCrossingDay {
   windgust?: number
   precipprob: number
   precip?: number
+  humidity?: number
+  cloudcover?: number
+  uvindex?: number
   hours?: Array<{
     datetime: string
     temp: number

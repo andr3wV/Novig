@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Cloud, CloudRain, Sun, ChevronDown, ChevronUp, Star, Droplet, Wind } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card"
+import { Badge } from "@/components/ui/badge"
 import { WeatherChart } from "./chart"
 import type { WeatherDay } from "@/lib/types"
 
@@ -41,7 +42,7 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
           : "opacity-90"
       }`}
     >
-      <CardHeader className="pb-3">
+      <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <div className="space-y-1 flex-1">
             <CardTitle className="text-lg font-bold">{day.dateLabel}</CardTitle>
@@ -85,6 +86,17 @@ export function WeatherCard({ day, location, isPrimary, isRecommended, recommend
             {Math.round(day.precipProb)}%
           </span>
         </div>
+
+        {/* Weather Message Badges */}
+        {day.messages && day.messages.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {day.messages.map((message, index) => (
+              <Badge key={index} variant={message.variant}>
+                {message.text}
+              </Badge>
+            ))}
+          </div>
+        )}
 
         {/* Chart Toggle Button (Mobile) */}
         <div className="md:hidden">
