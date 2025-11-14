@@ -5,10 +5,10 @@ import { ControllerBar } from "@/components/controller-bar"
 import { WeatherComparison } from "@/components/comparison"
 
 export default function Home() {
-  const [location, setLocation] = useState("Dolores Park, SF")
+  const [location, setLocation] = useState("Washington, DC")
   const [eventTime, setEventTime] = useState("afternoon")
   const [dayOfWeek, setDayOfWeek] = useState("Friday")
-  const [coordinates, setCoordinates] = useState({ lat: 37.7694, lon: -122.4862 })
+  const [coordinates, setCoordinates] = useState({ lat: 38.8951, lon: -77.0364 })
 
   return (
     <div className="min-h-screen flex flex-col space-y-6">
