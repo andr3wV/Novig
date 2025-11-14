@@ -23,7 +23,8 @@ export async function getWeatherForDate(
   const apiKey = process.env.VISUAL_CROSSING_API_KEY
 
   if (!apiKey) {
-    throw new Error("VISUAL_CROSSING_API_KEY environment variable is not set")
+    console.error("Weather API error: VISUAL_CROSSING_API_KEY environment variable is not set")
+    throw new Error("Weather service is temporarily unavailable. Please try again later.")
   }
 
   try {
@@ -42,13 +43,15 @@ export async function getWeatherForDate(
       } catch (_) {
         // ignore
       }
-      throw new Error(`Weather API error: ${response.status} ${response.statusText} ${details}`.trim())
+      console.error(`Weather API error: ${response.status} ${response.statusText} - ${details}`)
+      throw new Error("Weather service is temporarily unavailable. Please try again later.")
     }
 
     const data = await response.json()
 
     if (!data.days || data.days.length === 0) {
-      throw new Error("Invalid API response - no day data")
+      console.error("Weather API error: Invalid response structure - missing days array")
+      throw new Error("Weather data is temporarily unavailable. Please try again later.")
     }
 
     const day: VisualCrossingDay = data.days[0]
@@ -60,6 +63,6 @@ export async function getWeatherForDate(
     return processDayData(day, targetDate, timeOfDay, occurrenceIndex)
   } catch (error) {
     console.error("Weather API error:", error)
-    throw error
+    throw new Error("Weather service is temporarily unavailable. Please try again later.")
   }
 }

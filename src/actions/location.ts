@@ -8,7 +8,8 @@ export async function searchLocations(query: string): Promise<LocationSuggestion
   const apiKey = process.env.VISUAL_CROSSING_API_KEY
 
   if (!apiKey) {
-    throw new Error("VISUAL_CROSSING_API_KEY environment variable is not set")
+    console.error("Location API error: VISUAL_CROSSING_API_KEY environment variable is not set")
+    throw new Error("Location service is temporarily unavailable. Please try again later.")
   }
 
   try {
@@ -22,13 +23,14 @@ export async function searchLocations(query: string): Promise<LocationSuggestion
         console.log("Location not found:", query)
         return []
       }
-      throw new Error(`Location search failed: ${response.statusText}`)
+      console.error(`Location API error: ${response.status} ${response.statusText}`)
+      throw new Error("Location service is temporarily unavailable. Please try again later.")
     }
 
     const data = await response.json()
 
     if (!data.resolvedAddress || !data.latitude || !data.longitude) {
-      console.log("Invalid location response:", data)
+      console.error("Location API error: Invalid response structure - missing required fields")
       return []
     }
 
