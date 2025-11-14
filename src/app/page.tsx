@@ -11,8 +11,8 @@ export default function Home() {
   const [coordinates, setCoordinates] = useState({ lat: 37.7694, lon: -122.4862 })
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Sticky Controller Bar */}
+    <div className="min-h-screen flex flex-col space-y-6">
+      {/*  Controller Bar */}
       <ControllerBar
         location={location}
         dayOfWeek={dayOfWeek}

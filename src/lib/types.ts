@@ -42,6 +42,7 @@ export interface VisualCrossingDay {
   windspeed: number
   windgust?: number
   precipprob: number
+  precip?: number
   hours?: Array<{
     datetime: string
     temp: number
@@ -52,5 +53,3 @@ export interface VisualCrossingDay {
     precip?: number
   }>
 }
-
-// Removed complex decision types - now using simple recommendation logic

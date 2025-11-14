@@ -5,6 +5,7 @@ import { MapPin, X, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { searchLocations } from "@/actions/location"
 import type { LocationSuggestion } from "@/lib/types"
+
 interface LocationSelectorProps {
   value: string
   onChange: (location: string, coordinates: { lat: number; lon: number }) => void

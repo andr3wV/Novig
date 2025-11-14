@@ -1,13 +1,15 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { WeatherCard } from "./weather-card"
-import { getWeatherData } from "@/actions/weather"
+import { getWeatherForDate } from "@/actions/weather"
+import { calculateNextOccurrences } from "@/lib/utils"
 import { getRecommendation } from "@/lib/decision"
 import type { WeatherDay } from "@/lib/types"
 import { LoadingSkeleton } from "./loading"
 import { RightAccordion } from "./right-accordion"
 import { weatherCache } from "@/lib/weather-cache"
+import { processDayData } from "@/lib/weather-processing"
 
 interface WeatherComparisonProps {
   location: string
@@ -22,6 +24,36 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
   const [recommendationReason, setRecommendationReason] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [targetDates, setTargetDates] = useState<string[]>([])
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null)
+
+  const fetchDateData = useCallback(async (date: string, index: number): Promise<WeatherDay> => {
+    const cachedRawData = weatherCache.getDate(coordinates.lat, coordinates.lon, date)
+    if (cachedRawData) {
+      return processDayData(cachedRawData, date, eventTime, index)
+    }
+    return await getWeatherForDate(coordinates.lat, coordinates.lon, date, eventTime, index)
+  }, [coordinates, eventTime])
+
+  const loadMoreDates = useCallback(async (count: number) => {
+    if (weatherData.length >= count || isLoadingMore || weatherData.length >= targetDates.length) return
+
+    setIsLoadingMore(true)
+    try {
+      const datesToFetch = targetDates.slice(weatherData.length, count)
+      const newData = await Promise.all(
+        datesToFetch.map((date, i) => fetchDateData(date, weatherData.length + i))
+      )
+      setWeatherData(prev => [...prev, ...newData])
+    } catch (err) {
+      console.error("Error loading more dates:", err)
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [weatherData.length, targetDates, fetchDateData, isLoadingMore])
+
+  const loadNextDate = useCallback(() => loadMoreDates(weatherData.length + 1), [loadMoreDates, weatherData.length])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -29,29 +61,21 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
         setLoading(true)
         setError(null)
         
-        // Check cache first
-        const cachedData = weatherCache.get(coordinates.lat, coordinates.lon, dayOfWeek, eventTime)
+        const dates = calculateNextOccurrences(dayOfWeek, 10)
+        setTargetDates(dates)
         
-        let data: WeatherDay[]
-        if (cachedData) {
-          // Use cached data
-          data = cachedData
-        } else {
-          // Fetch from API and cache the result
-          data = await getWeatherData(coordinates.lat, coordinates.lon, dayOfWeek, eventTime)
-          weatherCache.set(coordinates.lat, coordinates.lon, dayOfWeek, eventTime, data)
-        }
+        const initialData = await Promise.all([
+          fetchDateData(dates[0], 0),
+          fetchDateData(dates[1], 1),
+          fetchDateData(dates[2], 2)
+        ])
         
-        setWeatherData(data)
+        setWeatherData(initialData)
         
-        // Generate recommendation if we have 2 days
-        if (data.length >= 2) {
-          const rec = getRecommendation(data[0], data[1])
+        if (initialData.length >= 2) {
+          const rec = getRecommendation(initialData[0], initialData[1])
           setRecommendedIndex(rec.recommendedIndex)
           setRecommendationReason(rec.reason)
-        } else {
-          setRecommendedIndex(null)
-          setRecommendationReason(null)
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch weather data")
@@ -59,9 +83,25 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
         setLoading(false)
       }
     }
-
     fetchData()
-  }, [coordinates, dayOfWeek, eventTime])
+  }, [coordinates, dayOfWeek, eventTime, fetchDateData])
+
+  useEffect(() => {
+    const trigger = loadMoreTriggerRef.current
+    if (!trigger) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && !isLoadingMore && weatherData.length < targetDates.length) {
+          loadNextDate()
+        }
+      },
+      { rootMargin: '100px', threshold: 0.1 }
+    )
+
+    observer.observe(trigger)
+    return () => observer.disconnect()
+  }, [loadNextDate, isLoadingMore, weatherData.length, targetDates.length])
 
   if (loading) {
     return <LoadingSkeleton />
@@ -86,9 +126,7 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
 
   return (
     <div className="space-y-6">
-      {/* Weather Cards with Inline Charts - Mobile Vertical Stack, Desktop Side-by-Side */}
       <div className="container mx-auto px-4">
-        {/* Mobile vertical stack - show all days */}
         <div className="grid grid-cols-1 gap-6 md:hidden">
           {weatherData.map((day, idx) => (
             <WeatherCard
@@ -100,28 +138,36 @@ export function WeatherComparison({ location, coordinates, dayOfWeek, eventTime 
               recommendationReason={recommendedIndex === idx ? recommendationReason ?? undefined : undefined}
             />
           ))}
+          
+          {weatherData.length < targetDates.length && (
+            <>
+              <div ref={loadMoreTriggerRef} className="h-4" />
+              {isLoadingMore && (
+                <div className="py-8 text-center">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+                </div>
+              )}
+            </>
+          )}
         </div>
 
-        {/* Desktop: left fixed card + right accordion carousel */}
         <div className="hidden md:grid md:grid-cols-2 gap-6 items-stretch">
-          <div className="h-full">
-            <WeatherCard
-              day={weatherData[0]}
-              location={location}
-              isPrimary
-              isRecommended={recommendedIndex === 0}
-              recommendationReason={recommendedIndex === 0 ? recommendationReason ?? undefined : undefined}
-            />
-          </div>
-          {weatherData.length > 1 ? (
+          <WeatherCard
+            day={weatherData[0]}
+            location={location}
+            isPrimary
+            isRecommended={recommendedIndex === 0}
+            recommendationReason={recommendedIndex === 0 ? recommendationReason ?? undefined : undefined}
+          />
+          {weatherData.length > 1 && (
             <RightAccordion
               days={weatherData.slice(1)}
               location={location}
               initialRightRecommended={recommendedIndex === 1}
               recommendationReason={recommendedIndex === 1 ? recommendationReason ?? undefined : undefined}
+              onLoadMore={loadMoreDates}
+              maxDates={targetDates.length}
             />
-          ) : (
-            <div className="h-full" />
           )}
         </div>
       </div>

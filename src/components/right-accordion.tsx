@@ -1,6 +1,6 @@
 "use client"
 
-import * as React from "react"
+import { useEffect, useState } from "react"
 import { Cloud, CloudRain, Sun, ArrowRight, Droplet, Wind } from "lucide-react"
 
 import type { WeatherDay } from "@/lib/types"
@@ -18,6 +18,8 @@ interface RightAccordionProps {
   location: string
   initialRightRecommended?: boolean
   recommendationReason?: string
+  onLoadMore?: (count: number) => Promise<void>
+  maxDates?: number
 }
 
 const MINI_WIDTH_PX = 56
@@ -31,15 +33,24 @@ function getSmallIcon(condition: string) {
   return <Cloud className="w-4 h-4 text-gray-400" />
 }
 
-export function RightAccordion({ days, location, initialRightRecommended, recommendationReason }: RightAccordionProps) {
-  const [api, setApi] = React.useState<CarouselApi | null>(null)
-  const [selectedIndex, setSelectedIndex] = React.useState(0)
+export function RightAccordion({ days, location, initialRightRecommended, recommendationReason, onLoadMore, maxDates = 10 }: RightAccordionProps) {
+  const [api, setApi] = useState<CarouselApi | null>(null)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
-  // Bind to carousel selection
-  React.useEffect(() => {
+  useEffect(() => {
     if (!api) return
     const onSelect = () => {
-      setSelectedIndex(api.selectedScrollSnap())
+      const newIndex = api.selectedScrollSnap()
+      setSelectedIndex(newIndex)
+
+      if (onLoadMore && !isLoadingMore && days.length >= 2 && newIndex >= days.length - 1) {
+        const totalDaysNeeded = days.length + 3
+        if (totalDaysNeeded <= maxDates) {
+          setIsLoadingMore(true)
+          onLoadMore(totalDaysNeeded).finally(() => setIsLoadingMore(false))
+        }
+      }
     }
     onSelect()
     api.on("select", onSelect)
@@ -48,44 +59,30 @@ export function RightAccordion({ days, location, initialRightRecommended, recomm
       api.off("select", onSelect)
       api.off("reInit", onSelect)
     }
-  }, [api])
+  }, [api, days.length, isLoadingMore, maxDates, onLoadMore])
 
-  // Compute stack metrics
-  const collapsedCount = selectedIndex
-  const visibleStack = Math.min(collapsedCount, 4)
-  const startIndex = Math.max(0, collapsedCount - visibleStack)
+  const visibleStack = Math.min(selectedIndex, 4)
+  const startIndex = Math.max(0, selectedIndex - visibleStack)
   const stackWidth = visibleStack > 0 ? MINI_WIDTH_PX + (visibleStack - 1) * MINI_OVERLAP_PX : 0
-
-  const canGoNext = selectedIndex < (days.length - 1)
-  const scrollNext = () => api?.scrollNext()
-  const scrollPrev = () => api?.scrollPrev()
 
   return (
     <div className="relative h-full">
-      {/* Collapsed mini-card stack (click to go back) */}
       <div
         className="absolute inset-y-0 left-0 hidden md:block"
         style={{ width: `${stackWidth}px` }}
-        onClick={() => {
-          if (collapsedCount > 0) scrollPrev()
-        }}
+        onClick={() => selectedIndex > 0 && api?.scrollPrev()}
         role="button"
         aria-label="Previous week"
       >
         {Array.from({ length: visibleStack }).map((_, i) => {
-          const realIndex = startIndex + i
-          const day = days[realIndex]
-          const left = i * MINI_OVERLAP_PX
-          const dateShort =
-            typeof day.dateLabel === "string" && day.dateLabel.includes(", ")
-              ? day.dateLabel.split(", ")[1]
-              : day.dateLabel
+          const day = days[startIndex + i]
+          const dateShort = day.dateLabel.includes(", ") ? day.dateLabel.split(", ")[1] : day.dateLabel
           return (
             <div
-              key={realIndex}
+              key={startIndex + i}
               className="absolute top-0 bottom-0 border bg-background/90 backdrop-blur-sm hover:bg-background transition-colors"
               style={{
-                left: `${left}px`,
+                left: `${i * MINI_OVERLAP_PX}px`,
                 width: `${MINI_WIDTH_PX}px`,
                 zIndex: 100 + i,
               }}
@@ -112,7 +109,6 @@ export function RightAccordion({ days, location, initialRightRecommended, recomm
         })}
       </div>
 
-      {/* Right detail area with dynamic left padding that grows as stack builds */}
       <div
         className="h-full"
         style={{
@@ -126,28 +122,28 @@ export function RightAccordion({ days, location, initialRightRecommended, recomm
           className="h-full"
         >
           <CarouselContent className="h-full">
-            {days.map((day, idx) => (
-              <CarouselItem key={idx} className="h-full">
-                <div className="h-full">
+            {days.map((day, idx) => {
+              const isRecommended = initialRightRecommended && idx === 0 && selectedIndex === 0
+              return (
+                <CarouselItem key={idx} className="h-full">
                   <WeatherCard
                     day={day}
                     location={location}
                     isPrimary={false}
-                    isRecommended={initialRightRecommended === true && idx === 0 && selectedIndex === 0}
-                    recommendationReason={initialRightRecommended === true && idx === 0 && selectedIndex === 0 ? recommendationReason : undefined}
+                    isRecommended={isRecommended}
+                    recommendationReason={isRecommended ? recommendationReason : undefined}
                   />
-                </div>
-              </CarouselItem>
-            ))}
+                </CarouselItem>
+              )
+            })}
           </CarouselContent>
 
-          {/* Next arrow (advance to subsequent week) */}
           <Button
             variant="outline"
             size="icon"
             className="absolute right-2 top-1/2 -translate-y-1/2 size-8 rounded-full"
-            onClick={scrollNext}
-            disabled={!canGoNext}
+            onClick={() => !isLoadingMore && api?.scrollNext()}
+            disabled={selectedIndex >= days.length - 1}
             aria-label="Next week"
           >
             <ArrowRight />
